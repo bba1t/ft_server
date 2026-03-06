@@ -1,0 +1,9 @@
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy       # Grafana выступает прокси между браузером и Prometheus
+    url: http://prometheus:9090      # URL Prometheus внутри Docker сети
+    isDefault: true                  # Источник по умолчанию
+    editable: false                  # Запрещаем редактирование в UI (чтобы настройки не потерялись)

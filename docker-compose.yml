@@ -1,0 +1,111 @@
+services:
+
+  ft_server:
+    build: .                # Собираю контейнер из dockerfile этой директории
+    image: ft_server        # Название образа
+    container_name: ft_server
+    ports:
+      - "80:80"             # HTTP порт
+    environment:
+      - AUTOINDEX=on        # Переменная автоиндекса
+    restart: unless-stopped
+    networks: 
+      - monitoring_net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]  # Проверяю что nginx отвечает
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+
+  nginx_exporter:
+    image: nginx/nginx-prometheus-exporter:latest 
+    container_name: nginx_exporter   
+    ports:
+      - "9113:9113"      
+    command:
+      - '-nginx.scrape-uri=http://ft_server/stub_status'  # URL для сбора метрик nginx
+    restart: unless-stopped
+    networks: 
+      - monitoring_net
+    depends_on:
+      ft_server:
+        condition: service_healthy
+
+  
+  php-fpm_exporter:
+    image: hipages/php-fpm_exporter:latest
+    container_name: php-fpm_exporter
+    ports:
+      - "9253:9253"
+    command:
+      - --phpfpm.scrape-uri=tcp://ft_server:9000/status   # Адрес для сбора метрик PHP-FPM
+      - --phpfpm.fix-process-count                        # Фикс счетчика процессов
+    restart: unless-stopped
+    networks: 
+      - monitoring_net
+    depends_on:
+      ft_server:
+        condition: service_healthy
+
+  
+  mysqld_exporter:
+    image: prom/mysqld-exporter:latest
+    container_name: mysqld_exporter   
+    ports:
+      - "9104:9104"
+    # Подключась к бд через отдельного пользователя для экспортера.
+    command:
+      - "--mysqld.username=exporter:exportpassword"
+      - "--mysqld.address=ft_server:3306"
+    networks:
+      - monitoring_net
+    depends_on:
+      ft_server:
+        condition: service_healthy 
+
+
+  prometheus:
+    image: prom/prometheus:latest  
+    container_name: prometheus 
+    ports:
+      - "9090:9090"  
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml  # Конфиг Prometheus
+      - prometheus_data:/prometheus
+    restart: unless-stopped
+    networks: 
+      - monitoring_net
+    depends_on:
+      - nginx_exporter
+      - php-fpm_exporter
+      - mysqld_exporter
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    restart: unless-stopped
+    networks: 
+      - monitoring_net
+    depends_on:
+      - prometheus
+
+networks:
+  monitoring_net:
+    name: monitoring_net
+
+# Том для сохранения данных прометеуса
+volumes:
+  prometheus_data:
+    name: prometheus_data
+  grafana_data:
+    name: grafana_data

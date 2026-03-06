@@ -1,0 +1,24 @@
+global:
+  scrape_interval: 15s      # Интервал сбора метрик - 15 секунд
+  evaluation_interval: 15s  # Интервал оценки правил - 15 секунд
+
+# Конфигурация сбора метрик
+scrape_configs:
+
+  # Цель - сам Prometheus. Можно обратиться и так ['prometheus:9090'], но тогда обращение будет происходить через сеть, что займет больше времени.
+  - job_name: 'prometheus'    # Имя задания для Prometheus
+    static_configs:
+      - targets: ['localhost:9090']  
+    metrics_path: /metrics    # Путь по умолчанию
+
+  - job_name: 'nginx_exporter' 
+    static_configs:
+      - targets: ['nginx_exporter:9113']  # Цель - nginx_exporter 
+  
+  - job_name: 'php-fpm_exporter'
+    static_configs:
+      - targets: ['php-fpm_exporter:9253']  # Цель - php-fpm_exporter  
+
+  - job_name: 'mysqld_exporter'
+    static_configs:
+      - targets: ['mysqld_exporter:9104']    

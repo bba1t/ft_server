@@ -1,0 +1,35 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Nginx Overview",
+    "tags": ["nginx", "monitoring"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Nginx Active Connections",
+        "type": "stat",                   
+        "targets": [
+          {
+            "expr": "nginx_connections_active",  
+            "legendFormat": "Active Connections"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Nginx Requests Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(nginx_requests_total[1m])", 
+            "legendFormat": "Requests/s"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+      }
+    ],
+    "time": {"from": "now-1h", "to": "now"}
+  }
+}
